@@ -1,0 +1,7 @@
+db.sqlite3
+sqldiff
+sqlite3.def
+sqlite3.dll
+sqlite3
+sqlite3_analyzer
+.env
