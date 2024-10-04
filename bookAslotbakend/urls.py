@@ -24,6 +24,9 @@ from sessioncrud.views import SessionByBusinessView
 from sessioncrud.views import UpdateSessionByBusinessView
 from sessioncrud.views import UpdateSessionByCustomerView
 from sessioncrud.views import SessionByCustomerView
+from sessioncrud.views import SessionByBusinessMailView
+from sessioncrud.views import SessionByCustomerMailView
+
 
 urlpatterns = [
     path('business/signup/', BusinessSignupView.as_view(), name='business-signup'),
@@ -36,6 +39,8 @@ urlpatterns = [
     path('sessions/business/<int:business_id>/', UpdateSessionByBusinessView.as_view(), name='update-sessions-by-business'),
     path('sessions/business/<int:business_id>/<int:session_id>/', UpdateSessionByBusinessView.as_view(), name='update-session-by-business'),
     path('sessions/customer/list/<int:customer_id>/', SessionByCustomerView.as_view(), name='list-session-by-customer'),
-    path('sessions/customer/<int:customer_id>/<int:session_id>/', UpdateSessionByCustomerView.as_view(), name='update-session-by-customer'),
+    path('sessions/customer/<int:customer_id>/<int:session_id>/', UpdateSessionByCustomerView.as_view(), name='update-session-by-customer'), 
+    path('sessions/business-mail/<str:business_mail>/', SessionByBusinessMailView.as_view(), name='session-by-business-mail'),
+    path('sessions/customer-mail/<str:customer_mail>/', SessionByCustomerMailView.as_view(), name='session-by-customer-mail'),
 ]
 

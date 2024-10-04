@@ -8,7 +8,7 @@ from rest_framework.authtoken.models import Token
 from .serializers import BusinessLoginSerializer
 from .serializers import CustomerSignupSerializer
 from .serializers import CustomerLoginSerializer
-from .models import Session
+from .models import Session, Business, Customer
 from .serializers import SessionSerializer
 
 class BusinessSignupView(APIView):
@@ -185,6 +185,43 @@ class UpdateSessionByCustomerView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+class SessionByBusinessMailView(APIView):
+    def get(self, request, business_mail):
+        try:
+            # Find the business by email
+            business = Business.objects.get(business_mail=business_mail)
+        except Business.DoesNotExist:
+            return Response({"detail": "Business not found with this email."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get all sessions for the found business
+        sessions = Session.objects.filter(business=business)
+        
+        if not sessions.exists():
+            return Response({"detail": "No sessions found for this business."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = SessionSerializer(sessions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+class SessionByCustomerMailView(APIView):
+    def get(self, request, customer_mail):
+        try:
+            # Find the customer by email
+            customer = Customer.objects.get(customer_mail=customer_mail)
+        except Customer.DoesNotExist:
+            return Response({"detail": "Customer not found with this email."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get all sessions for the found customer
+        sessions = Session.objects.filter(customer=customer)
+        
+        if not sessions.exists():
+            return Response({"detail": "No sessions found for this customer."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = SessionSerializer(sessions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 
