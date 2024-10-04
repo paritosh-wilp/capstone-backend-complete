@@ -26,14 +26,15 @@ class BusinessLoginView(APIView):
         if serializer.is_valid():
             business = serializer.validated_data['business']
 
-            # Get or create the auth token for the business #parichan : some issue here
-            token, created = Token.objects.get_or_create(user=business)
+            # # Get or create the auth token for the business #parichan : some issue here
+            # token, created = Token.objects.get_or_create(user=business)
 
             # Return the auth token
             return Response({
-                "auth_token": token.key,
                 "business_name": business.business_name,
-                "business_type": business.business_type
+                "business_type": business.business_type,
+                "business_id":business.business_id,
+                "business_mail":business.business_mail
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -54,12 +55,12 @@ class CustomerLoginView(APIView):
             customer = serializer.validated_data['customer']
 
             # Get or create the auth token for the customer
-            token, created = Token.objects.get_or_create(user=customer)
+            # token, created = Token.objects.get_or_create(user=customer)
 
             return Response({
-                "auth_token": token.key,
                 "customer_id": customer.customer_id,
                 "customer_name": customer.customer_name,
+                "customer_email":customer.customer_mail
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
