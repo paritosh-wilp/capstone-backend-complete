@@ -1,5 +1,5 @@
 from django.shortcuts import render
-
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +9,8 @@ from .serializers import BusinessLoginSerializer
 from .serializers import CustomerSignupSerializer
 from .serializers import CustomerLoginSerializer
 from .models import Session, Business, Customer
-from .serializers import SessionSerializer
+from rest_framework import generics, status
+from .serializers import SessionSerializer, BusinessSerializer, CustomerSerializer
 
 class BusinessSignupView(APIView):
     def post(self, request):
@@ -65,164 +66,76 @@ class CustomerLoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SessionListView(generics.ListAPIView):
+    """View to display all sessions with business and customer details."""
+    queryset = Session.objects.select_related('business', 'customer').all()
+    serializer_class = SessionSerializer
 
-class SessionListCreateView(APIView):
-    def get(self, request):
-        sessions = Session.objects.all()
-        serializer = SessionSerializer(sessions, many=True)
-        return Response(serializer.data)
 
+class CreateSessionView(APIView):
+    """View to create a new session by business email ID."""
+    
     def post(self, request):
         serializer = SessionSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class SessionDetailView(APIView):
-    def get(self, request, pk):
-        try:
-            session = Session.objects.get(pk=pk)
-        except Session.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        serializer = SessionSerializer(session)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        try:
-            session = Session.objects.get(pk=pk)
-        except Session.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        serializer = SessionSerializer(session, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-class SessionByBusinessView(APIView):
-    def get(self, request, business_id):
-        # Get all sessions for a specific business
-        sessions = Session.objects.filter(business_id=business_id)
-        
-        # Check if there are sessions for the provided business ID
-        if not sessions.exists():
-            return Response({"detail": "No sessions found for this business."}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = SessionSerializer(sessions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class UpdateSessionByBusinessView(APIView):
-    def put(self, request, business_id, session_id=None):
-        """
-        Updates session(s) by business.
-        - If session_id is provided, only that session will be updated.
-        - If session_id is not provided, all sessions for the business will be updated.
-        """
-
-        # If session_id is provided, update a specific session
-        if session_id:
+            business_email = request.data.get('business_email')
             try:
-                session = Session.objects.get(business_id=business_id, id=session_id)
-            except Session.DoesNotExist:
-                return Response({"detail": "Session not found for this business."}, status=status.HTTP_404_NOT_FOUND)
-
-            serializer = SessionSerializer(session, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # Otherwise, update all sessions for the business
-        sessions = Session.objects.filter(business_id=business_id)
-        if not sessions.exists():
-            return Response({"detail": "No sessions found for this business."}, status=status.HTTP_404_NOT_FOUND)
-
-        data = request.data  # Expect the same fields for each session
-        for session in sessions:
-            serializer = SessionSerializer(session, data=data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({"detail": "Sessions updated successfully."}, status=status.HTTP_200_OK)
-
-
-class SessionByCustomerView(APIView):
-    def get(self, request, customer_id):
-        # Get all sessions for a specific customer
-        sessions = Session.objects.filter(customer_id=customer_id)
-        
-        # Check if there are sessions for the provided customer ID
-        if not sessions.exists():
-            return Response({"detail": "No sessions found for this customer."}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = SessionSerializer(sessions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-class UpdateSessionByCustomerView(APIView):
-    def put(self, request, customer_id, session_id):
-        """
-        Updates a session for a specific customer.
-        """
-
-        try:
-            # Check if the session belongs to the customer
-            session = Session.objects.get(customer_id=customer_id, id=session_id)
-        except Session.DoesNotExist:
-            return Response({"detail": "Session not found for this customer."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Perform update
-        serializer = SessionSerializer(session, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
+                business = Business.objects.get(business_mail=business_email)
+                session = serializer.save(business=business)  # Assign the business to the session
+                return Response(SessionSerializer(session).data, status=status.HTTP_201_CREATED)
+            except Business.DoesNotExist:
+                return Response({"error": "Business with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-class SessionByBusinessMailView(APIView):
-    def get(self, request, business_mail):
+
+class UpdateSessionWithCustomerView(generics.UpdateAPIView):
+    """
+    Update a session based on session UID where customer is null and associate it with a customer.
+    """
+
+    serializer_class = SessionSerializer
+    
+    def put(self, request, session_uid, *args, **kwargs):
+
+        # Check if customer_email is provided in the request
+        customer_email = request.data.get("customer_email")
+
         try:
-            # Find the business by email
-            business = Business.objects.get(business_mail=business_mail)
-        except Business.DoesNotExist:
-            return Response({"detail": "Business not found with this email."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Get all sessions for the found business
-        sessions = Session.objects.filter(business=business)
-        
-        if not sessions.exists():
-            return Response({"detail": "No sessions found for this business."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = SessionSerializer(sessions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+            # First try to find the session where customer is null
+            session = Session.objects.get(session_uid=session_uid, customer__isnull=True)
+        except Session.DoesNotExist:
+             # If no such session is found, try to find the session with the given customer_email
+            try:
+                session = Session.objects.get(session_uid=session_uid, customer__customer_mail=customer_email)
+            except Session.DoesNotExist:
+                 # If both attempts fail, return an error response
+                return Response(
+                     {"error": "Session not found / Session already mapped to another customer / Customer is not null."},
+                status=status.HTTP_404_NOT_FOUND
+                )
 
 
-class SessionByCustomerMailView(APIView):
-    def get(self, request, customer_mail):
+        # Check if customer_email is provided in the requests
+        customer_email = request.data.get("customer_email")
+        if not customer_email:
+            return Response({"error": "Customer email is required to associate with the session."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            # Find the customer by email
-            customer = Customer.objects.get(customer_mail=customer_mail)
+            # Retrieve the customer by email
+            customer = Customer.objects.get(customer_mail=customer_email)
         except Customer.DoesNotExist:
-            return Response({"detail": "Customer not found with this email."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Customer with this email does not exist."},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        # Get all sessions for the found customer
-        sessions = Session.objects.filter(customer=customer)
-        
-        if not sessions.exists():
-            return Response({"detail": "No sessions found for this customer."}, status=status.HTTP_404_NOT_FOUND)
+        # Update the session with the customer and the validated data
+        serializer = self.get_serializer(session, data=request.data)
+        if serializer.is_valid():
+            # Associate the customer with the session
+            session.customer = customer
+            serializer.save()  # Save the updated session with the associated customer
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-        serializer = SessionSerializer(sessions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

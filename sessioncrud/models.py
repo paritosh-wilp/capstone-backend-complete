@@ -56,6 +56,7 @@ class Session(models.Model):
     )
 
     business = models.ForeignKey('Business', on_delete=models.CASCADE)
+    session_uid =  models.PositiveIntegerField(unique=True)
     session_date = models.DateField()
     timeslot = models.CharField(max_length=100)
     session_status = models.CharField(max_length=100, choices=SESSION_STATUS_CHOICES, default="isAvailable")
@@ -63,6 +64,37 @@ class Session(models.Model):
 
     def __str__(self):
         return f"{self.business.business_name} - {self.session_date} - {self.timeslot} - {self.session_status}"
+    
+    @property
+    def business_email(self):
+        """Get the business email from the related Business model."""
+        return self.business.business_mail
+
+    @property
+    def business_id(self):
+        """Get the business id from the related Business model."""
+        return self.business.business_id
+
+    @property
+    def business_type(self):
+        """Get the business id from the related Business model."""
+        return self.business.business_type
+
+    @property
+    def customer_id(self):
+        """Get the customer id from the related Customer model (if customer exists)."""
+        if self.customer:
+            return self.customer.customer_id
+        return None
+
+
+
+    @property
+    def customer_email(self):
+        """Get the customer email from the related Customer model (if customer exists)."""
+        if self.customer:
+            return self.customer.customer_mail
+        return None
 
 
 

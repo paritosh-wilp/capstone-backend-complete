@@ -90,9 +90,22 @@ class CustomerLoginSerializer(serializers.Serializer):
         return data
 
 
+
+class BusinessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Business
+        fields = ['business_id', 'business_name', 'business_mail', 'business_type']
+
+class CustomerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ['customer_id', 'customer_name', 'customer_mail']
+
 class SessionSerializer(serializers.ModelSerializer):
+    business = BusinessSerializer(read_only=True)
+    customer = CustomerSerializer(read_only=True)
+
     class Meta:
         model = Session
-        fields = ['id', 'business', 'session_date', 'timeslot', 'session_status', 'customer']
-
+        fields = ['session_uid', 'session_date', 'timeslot', 'session_status', 'business', 'customer']
 
