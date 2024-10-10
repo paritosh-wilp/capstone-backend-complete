@@ -20,7 +20,7 @@ from sessioncrud.views import BusinessSignupView
 from sessioncrud.views import BusinessLoginView
 from sessioncrud.views import CustomerSignupView, CustomerLoginView
 from sessioncrud.views import SessionListView, CreateSessionView
-from sessioncrud.views import UpdateSessionWithCustomerView
+from sessioncrud.views import UpdateSessionWithCustomerView, UpdateSessionByBusinessView
 
 
 urlpatterns = [
@@ -33,5 +33,8 @@ urlpatterns = [
     path('sessions/update/with-customer/<int:session_uid>/', 
          UpdateSessionWithCustomerView.as_view(), 
          name='update-session-with-customer'),
+    path('sessions/update/by-business/<int:session_uid>/', 
+         UpdateSessionByBusinessView.as_view(), 
+         name='update-session-by-business'),
 ]
 

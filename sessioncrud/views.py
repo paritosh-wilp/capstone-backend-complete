@@ -139,3 +139,38 @@ class UpdateSessionWithCustomerView(generics.UpdateAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdateSessionByBusinessView(generics.UpdateAPIView):
+    """
+    Update a session by business mail and session UID.
+    """
+
+    serializer_class = SessionSerializer
+
+    def put(self, request, session_uid, *args, **kwargs):
+        # Extract business_mail from request data
+        business_mail = request.data.get('business_mail')
+        
+        if not business_mail:
+            return Response(
+                {"error": "business_mail is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Retrieve the session by session_uid and business_mail
+            session = Session.objects.get(session_uid=session_uid, business__business_mail=business_mail)
+        except Session.DoesNotExist:
+            return Response(
+                {"error": "Session not found for the given session UID and business mail."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Use the serializer to update the session
+        serializer = self.get_serializer(session, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()  # Save the updated session
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
